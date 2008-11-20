@@ -57,9 +57,9 @@ class HConsole extends Plugin
 	
 	public function action_template_footer()
 	{
-		$wsse = Utils::wsse();
 		$user = User::identify();
 		if ( $user instanceof User ) {
+			$wsse = Utils::wsse();
 			$code = Controller::get_var('hconsole_code');
 			$display = empty($_POST['hconsole_code']) ? 'display:none;' : '';
 			echo <<<GOO
