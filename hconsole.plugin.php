@@ -61,12 +61,13 @@ class HConsole extends Plugin
 		$user = User::identify();
 		if ( $user instanceof User ) {
 			$code = Controller::get_var('hconsole_code');
+			$display = empty($_POST['hconsole_code']) ? 'display:none;' : '';
 			echo <<<GOO
 			
 			<div >
 			<a href="#" style="width:80px; padding:2px; background:#c00; text-align:center; position:fixed; bottom:0; right:0; font-size:11px; z-index:99; color:white; display:block;" onclick="jQuery('#hconsole').toggle('slow'); return false;">^ HConsole</a>
 			</div>
-			<div  id="hconsole" style='position:fixed; width:100%; bottom:0; left:0; padding:0; margin:0; background:#ccc;'>
+			<div  id="hconsole" style='$display position:fixed; width:100%; bottom:0; left:0; padding:0; margin:0; background:#ccc;'>
 			<form method='post' action='' style="padding:1em 2em; margin:0">
 				<textarea cols='100' rows='7' name='hconsole_code'>{$code}</textarea>
 				<input type='submit' value='run' />
