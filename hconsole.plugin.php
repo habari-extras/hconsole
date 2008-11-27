@@ -15,13 +15,20 @@ class HConsole extends Plugin
 		);
 	}
 	
+	public function alias()
+	{
+		return array (
+			'template_footer' => array( 'action_admin_footer', 'action_template_footer' )
+		);
+	}
+	
 	public function action_init()
 	{
 		Stack::add( 'template_header_javascript', Site::get_url('scripts') . '/jquery.js', 'jquery' );
-		if ( isset($_POST['hconsole_code']) ) {
+		if ( User::identify()->loggedin && $_POST->raw('hconsole_code') ) {
 			$wsse = Utils::WSSE( $_POST['nonce'], $_POST['timestamp'] );
 			if ( $_POST['PasswordDigest'] == $wsse['digest'] ) {
-				$this->code = $this->parse_code(rawurldecode(stripslashes($_POST['hconsole_code'])));
+				$this->code = $this->parse_code(rawurldecode($_POST->raw('hconsole_code')));
 				foreach( $this->code['hooks'] as $i => $hook ) {
 					$functions = $this->get_functions($hook['code']);
 					if ( empty($functions) ) {
@@ -50,17 +57,11 @@ class HConsole extends Plugin
 		}
 	}
 	
-	public function action_admin_footer()
+	public function template_footer()
 	{
-		$this->action_template_footer();
-	}
-	
-	public function action_template_footer()
-	{
-		$user = User::identify();
-		if ( $user instanceof User ) {
+		if ( User::identify()->loggedin ) {
 			$wsse = Utils::wsse();
-			$code = Controller::get_var('hconsole_code');
+			$code = $_POST->raw('hconsole_code');
 			$display = empty($_POST['hconsole_code']) ? 'display:none;' : '';
 			echo <<<GOO
 			
