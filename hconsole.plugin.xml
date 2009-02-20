@@ -1,0 +1,8 @@
+<plugin>
+	<name>HConsole</name>
+	<version>0.1</version>
+	<author>Habari Community</author>
+	<license>Apache License 2.0</license>
+	<description>A live Habari Console.</description>
+</plugin>
+
