@@ -79,7 +79,7 @@ class HConsole extends Plugin
 			<pre style="border:none; padding:1em 2em; margin:0; background:none; overflow:auto; max-height:150px;">
 GOO;
 			Plugins::act('hconsole_debug');
-			echo "</pre></div></div>";
+			echo "</pre></div>";
 		}
 	}
 	
