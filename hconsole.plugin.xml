@@ -1,8 +1,10 @@
-<plugin>
+<?xml version="1.0" encoding="utf-8" ?>
+<pluggable type="plugin">
 	<name>HConsole</name>
-	<version>0.1</version>
-	<author>Habari Community</author>
-	<license>Apache License 2.0</license>
-	<description>A live Habari Console.</description>
-</plugin>
-
+	<license url="http://www.apache.org/licenses/LICENSE-2.0.html">Apache Software License 2.0</license>
+	<url>http://habariproject.org/</url>
+	<author url="http://habariproject.org/">Habari Community</author>
+	<version>0.7-0.1</version>
+	<description><![CDATA[A live Habari Console.]]></description>
+	<copyright>2009</copyright>
+</pluggable>
