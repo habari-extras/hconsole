@@ -4,17 +4,6 @@ class HConsole extends Plugin
 {
 	private $code = array();
 	
-	public function info()
-	{
-		return array (
-			'name' => 'HConsole',
-			'version' => '0.1',
-			'author' => 'Habari Community',
-			'license' => 'Apache License 2.0',
-			'description' => 'A live Habari Console.',
-		);
-	}
-	
 	public function alias()
 	{
 		return array (
