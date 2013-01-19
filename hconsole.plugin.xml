@@ -5,7 +5,7 @@
 	<url>http://habariproject.org/</url>
 	<author url="http://habariproject.org/">Habari Community</author>
 	<guid>7cda959b-28df-4ce1-ad9a-7a1723727e0b</guid>
-	<version>0.7-0.1</version>
+	<version>0.1</version>
 	<description><![CDATA[A live Habari Console.]]></description>
 	<copyright>2009</copyright>
 
