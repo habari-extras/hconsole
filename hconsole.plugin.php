@@ -13,6 +13,20 @@ class HConsole extends Plugin
 		);
 	}
 
+	/**
+	 * Early as possible, let's define DEBUG so we get DEBUG output and turn on error display;
+	 * But only if we have code to execute.
+	 */
+	public function action_plugins_loaded()
+	{
+		if ( !empty($_POST['hconsole_code']) ) {
+			if ( !defined( 'DEBUG') ) {
+				const DEBUG = true;
+			}
+			ini_set('display_errors', 'on');
+		}
+	}
+
 	public function action_init()
 	{
 		Stack::add( 'template_header_javascript', Site::get_url('scripts') . '/jquery.js', 'jquery' );
@@ -69,7 +83,12 @@ class HConsole extends Plugin
 			</form>
 			<pre style="border:none; padding:1em 2em; margin:0; background:none; overflow:auto; max-height:150px;">
 GOO;
-			Plugins::act('hconsole_debug');
+			try {
+				Plugins::act('hconsole_debug');
+			}
+			catch ( \Exception $e ) {
+				\Habari\Error::exception_handler($e);
+			}
 			echo "</pre></div>";
 		}
 	}
