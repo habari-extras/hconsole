@@ -1,16 +1,18 @@
 <?php
 
+namespace Habari;
+
 class HConsole extends Plugin
 {
 	private $code = array();
-	
+
 	public function alias()
 	{
 		return array (
 			'template_footer' => array( 'action_admin_footer', 'action_template_footer' )
 		);
 	}
-	
+
 	public function action_init()
 	{
 		Stack::add( 'template_header_javascript', Site::get_url('scripts') . '/jquery.js', 'jquery' );
@@ -38,14 +40,14 @@ class HConsole extends Plugin
 			}
 		}
 	}
-	
+
 	public function action_hconsole_debug()
 	{
 		if ( isset($this->code['debug']) ) {
 			eval( $this->code['debug'] );
 		}
 	}
-	
+
 	public function template_footer()
 	{
 		if ( User::identify()->loggedin ) {
@@ -53,7 +55,7 @@ class HConsole extends Plugin
 			$code = $_POST->raw('hconsole_code');
 			$display = empty($_POST['hconsole_code']) ? 'display:none;' : '';
 			echo <<<GOO
-			
+
 			<div >
 			<a href="#" style="width:80px; padding:2px; background:#c00; text-align:center; position:fixed; bottom:0; right:0; font-size:11px; z-index:999; color:white; display:block;" onclick="jQuery('#hconsole').toggle('slow'); return false;">^ HConsole</a>
 			</div>
@@ -71,7 +73,7 @@ GOO;
 			echo "</pre></div>";
 		}
 	}
-	
+
 	private function get_functions ( $code ) {
 		$tokens = token_get_all( "<?php $code ?>");
 		$functions = array();
@@ -87,7 +89,7 @@ GOO;
 		}
 		return $functions;
 	}
-	
+
 	private function parse_code( $code )
 	{
 		$tokens = token_get_all( "<?php $code ?>");
