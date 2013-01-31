@@ -20,8 +20,8 @@ class HConsole extends Plugin
 	public function action_plugins_loaded()
 	{
 		if ( !empty($_POST['hconsole_code']) ) {
-			if ( !defined( 'DEBUG') ) {
-				define('DEBUG', true);
+			if ( !defined( 'Habari\DEBUG') ) {
+				define('Habari\DEBUG', true);
 			}
 			ini_set('display_errors', 'on');
 		}
