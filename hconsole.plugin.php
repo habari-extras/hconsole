@@ -21,7 +21,7 @@ class HConsole extends Plugin
 	{
 		if ( !empty($_POST['hconsole_code']) ) {
 			if ( !defined( 'DEBUG') ) {
-				const DEBUG = true;
+				define('DEBUG', true);
 			}
 			ini_set('display_errors', 'on');
 		}
