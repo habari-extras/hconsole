@@ -58,7 +58,16 @@ class HConsole extends Plugin
 	public function action_hconsole_debug()
 	{
 		if ( isset($this->code['debug']) ) {
-			eval( $this->code['debug'] );
+			ob_start();
+			$res = eval( $this->code['debug'] );
+			$dat = ob_get_contents();
+			ob_end_clean();
+			if ( $res === false ) {
+				throw Error::raise($dat, E_COMPILE_ERROR);
+			}
+			else {
+				echo $dat;
+			}
 		}
 	}
 
@@ -87,7 +96,7 @@ GOO;
 				Plugins::act('hconsole_debug');
 			}
 			catch ( \Exception $e ) {
-				\Habari\Error::exception_handler($e);
+				Error::exception_handler($e);
 			}
 			echo "</pre></div>";
 		}
