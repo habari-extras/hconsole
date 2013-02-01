@@ -66,7 +66,7 @@ class HConsole extends Plugin
 				throw Error::raise($dat, E_COMPILE_ERROR);
 			}
 			else {
-				echo $dat;
+				echo htmlspecialchars($dat);
 			}
 		}
 	}
