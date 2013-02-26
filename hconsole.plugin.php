@@ -13,24 +13,26 @@ class HConsole extends Plugin
 	
 	public function action_init()
 	{
-		Stack::add( 'template_header_javascript', Site::get_url('scripts') . '/jquery.js', 'jquery' );
-		if ( User::identify()->loggedin && $_POST->raw('hconsole_code') ) {
-			$wsse = Utils::WSSE( $_POST['nonce'], $_POST['timestamp'] );
-			if ( $_POST['PasswordDigest'] == $wsse['digest'] ) {
-				$this->code = $this->parse_code(rawurldecode($_POST->raw('hconsole_code')));
-				foreach( $this->code['hooks'] as $i => $hook ) {
-					$functions = $this->get_functions($hook['code']);
-					if ( empty($functions) ) {
-						trigger_error( "Parse Error in $i. No function to register.", E_USER_WARNING );
-					}
-					else {
-						eval($hook['code']);
-						foreach ( $functions as $function ) {
-							if ( $i == 'action_init' ) {
-								call_user_func($function);
-							}
-							else {
-								Plugins::register($function, $hook['type'], $hook['hook']);
+		if ( User::identify()->loggedin ) {
+			Stack::add( 'template_header_javascript', Site::get_url('scripts') . '/jquery.js', 'jquery' );
+			if ( $_POST->raw('hconsole_code') ) {
+				$wsse = Utils::WSSE( $_POST['nonce'], $_POST['timestamp'] );
+				if ( $_POST['PasswordDigest'] == $wsse['digest'] ) {
+					$this->code = $this->parse_code(rawurldecode($_POST->raw('hconsole_code')));
+					foreach( $this->code['hooks'] as $i => $hook ) {
+						$functions = $this->get_functions($hook['code']);
+						if ( empty($functions) ) {
+							trigger_error( "Parse Error in $i. No function to register.", E_USER_WARNING );
+						}
+						else {
+							eval($hook['code']);
+							foreach ( $functions as $function ) {
+								if ( $i == 'action_init' ) {
+									call_user_func($function);
+								}
+								else {
+									Plugins::register($function, $hook['type'], $hook['hook']);
+								}
 							}
 						}
 					}
