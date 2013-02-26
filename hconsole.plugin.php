@@ -1,10 +1,11 @@
 <?php
 
-namespace Habari;
+//namespace Habari;
 
 class HConsole extends Plugin
 {
 	private $code = array();
+	private $sql = false;
 
 	public function alias()
 	{
@@ -33,6 +34,11 @@ class HConsole extends Plugin
 		if ( User::identify()->loggedin && $_POST->raw('hconsole_code') ) {
 			$wsse = Utils::WSSE( $_POST['nonce'], $_POST['timestamp'] );
 			if ( $_POST['PasswordDigest'] == $wsse['digest'] ) {
+				if ( isset($_POST['sql']) ) {
+					require "texttable.php";
+					$this->sql = rawurldecode($_POST->raw('hconsole_code'));
+					return;
+				}
 				$this->code = $this->parse_code(rawurldecode($_POST->raw('hconsole_code')));
 				foreach( $this->code['hooks'] as $i => $hook ) {
 					$functions = $this->get_functions($hook['code']);
@@ -69,6 +75,16 @@ class HConsole extends Plugin
 				echo htmlspecialchars($dat);
 			}
 		}
+		if ( isset($this->sql) ) {
+			$d = DB::get_results($this->sql);
+			$itemlist = array();
+			foreach( $d as $r) {
+				$itemlist[] = $r->to_array();
+			}
+			$renderer = new ArrayToTextTable($itemlist);
+			$renderer->showHeaders(true);
+			$renderer->render();
+		}
 	}
 
 	public function template_footer()
@@ -77,6 +93,7 @@ class HConsole extends Plugin
 			$wsse = Utils::wsse();
 			$code = $_POST->raw('hconsole_code');
 			$display = empty($_POST['hconsole_code']) ? 'display:none;' : '';
+			$sql = isset($_POST['sql']) ? 'checked="true"' : '';
 			echo <<<GOO
 
 			<div >
@@ -86,11 +103,12 @@ class HConsole extends Plugin
 			<form method='post' action='' style="padding:1em 2em; margin:0">
 				<textarea cols='100' rows='7' name='hconsole_code'>{$code}</textarea>
 				<input type='submit' value='run' />
+				<input type='checkbox' name='sql' $sql />SQL
 				<input type="hidden" id="nonce" name="nonce" value="{$wsse['nonce']}">
 				<input type="hidden" id="timestamp" name="timestamp" value="{$wsse['timestamp']}">
 				<input type="hidden" id="PasswordDigest" name="PasswordDigest" value="{$wsse['digest']}">
 			</form>
-			<pre style="border:none; padding:1em 2em; margin:0; background:none; overflow:auto; max-height:150px;">
+			<pre style="font-family:monospace; border:none; padding:1em 2em; margin:0; background:none; overflow:auto; max-height:150px;">
 GOO;
 			try {
 				Plugins::act('hconsole_debug');
