@@ -91,7 +91,7 @@ class HConsole extends Plugin
 			if (preg_match('#^\s*select.*#i', $this->sql)) {
 				$d = DB::get_results($this->sql);
 				if (is_array($d) && count($d)) {
-					$itemlist = array_map( function ($r) { return $r->to_array(); }, $d);
+					$itemlist = array_map( function ($r) { return array_map('htmlspecialchars', $r->to_array()); }, $d);
 				}
 				else {
 					$itemlist[] = array('result' => 'empty set');
@@ -110,6 +110,9 @@ class HConsole extends Plugin
 		}
 	}
 
+	/**
+	 * @TODO clean up this html and code here.
+	 */
 	public function template_footer()
 	{
 		if ( User::identify()->loggedin ) {
@@ -117,22 +120,14 @@ class HConsole extends Plugin
 			$code = $_POST->raw('hconsole_code');
 			$display = empty($_POST['hconsole_code']) ? 'display:none;' : '';
 			$htmlspecial = isset($_POST['htmlspecial']) ? 'checked="true"' : '';
+			$sql = isset($_POST['sql']) ? 'checked="true"' : '';
 			echo <<<GOO
 
 			<div >
 			<a href="#" style="width:80px; padding:2px; background:#c00; text-align:center; position:fixed; bottom:0; right:0; font-size:11px; z-index:999; color:white; display:block;" onclick="jQuery('#hconsole').toggle('slow'); return false;">^ HConsole</a>
 			</div>
-			<div  id="hconsole" style='$display position:fixed; width:100%; bottom:0; left:0; padding:0; margin:0; background:#333; z-index:998;'>
-			<form method='post' action='' style="padding:1em 2em; margin:0; text-align:left; color:#eee;">
-				<textarea cols='100' rows='7' name='hconsole_code'>{$code}</textarea><br>
-				<input type='submit' value='RUN CODE' />
-				<input type='checkbox' name='htmlspecial' value='true' $htmlspecial />htmlspecialchars<br>
-				<input type='submit' name='sql' value="RUN SQL" />
-				<input type="hidden" id="nonce" name="nonce" value="{$wsse['nonce']}">
-				<input type="hidden" id="timestamp" name="timestamp" value="{$wsse['timestamp']}">
-				<input type="hidden" id="PasswordDigest" name="PasswordDigest" value="{$wsse['digest']}">
-			</form>
-			<pre style="font-family:monospace; font-size:11px; padding:1em 2em; margin:1em; background:#eee; color:#222; border:1px solid #000; overflow:auto; max-height:350px;">
+			<div  id="hconsole" style='$display position:fixed; width:100%; bottom:0; left:0; padding:0; margin:0; background:#222; z-index:998;'>
+			<pre class="resizable" style="font-family:monospace; font-size:11px; padding:1em 2em; margin:1em; background:#eee; color:#222; border:1px solid #000; overflow:auto; max-height:400px;">
 GOO;
 			try {
 				Plugins::act('hconsole_debug');
@@ -140,7 +135,44 @@ GOO;
 			catch ( \Exception $e ) {
 				Error::exception_handler($e);
 			}
-			echo "</pre></div>";
+			echo <<<MOO
+			</pre>
+			<form method='post' action='' style="padding:1em 2em; margin:0; text-align:left; color:#eee; position:relative">
+				<textarea cols='100' rows='7' name='hconsole_code'>{$code}</textarea><br>
+				<div id="editor-filler" style="width:100%; position:realtive; height:180px; margin:0; padding:0;">
+				<div id="hconsole_edit" style="position:absolute; left:0; top:0; height:180px; width:100%;"></div>
+				</div>
+				<input type='submit' value='RUN' style="clear:both" />
+				<input type='checkbox' name='htmlspecial' value='true' $htmlspecial />htmlspecialchars
+				<input type='checkbox' name='sql' value="RUN SQL" $sql />SQL
+				<input type="hidden" id="nonce" name="nonce" value="{$wsse['nonce']}">
+				<input type="hidden" id="timestamp" name="timestamp" value="{$wsse['timestamp']}">
+				<input type="hidden" id="PasswordDigest" name="PasswordDigest" value="{$wsse['digest']}">
+			</form>
+			<script src="http://d1n0x3qji82z53.cloudfront.net/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+			<script>
+			var editor = ace.edit("hconsole_edit");
+			var textarea = $('textarea[name="hconsole_code"]').hide();
+			$('input[name="sql"]').on('click', sqlCheck);
+			function sqlCheck (){
+			  if ($('input[name="sql"]').attr('checked')) {
+			    editor.getSession().setMode('ace/mode/sql');
+			  }
+			  else {
+			    editor.getSession().setMode('ace/mode/php');
+			  }
+			}
+			$(document).ready(function(){sqlCheck();});
+			editor.getSession().setValue(textarea.val());
+			editor.getSession().on('change', function(){
+			  textarea.val(editor.getSession().getValue());
+			});
+			editor.setTheme("ace/theme/twilight");
+			editor.getSession().setMode("ace/mode/php");
+			</script></div>
+MOO;
+
+
 		}
 	}
 
