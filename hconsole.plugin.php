@@ -91,7 +91,7 @@ class HConsole extends Plugin
 			if (preg_match('#^\s*select.*#i', $this->sql)) {
 				$d = DB::get_results($this->sql);
 				if (is_array($d) && count($d)) {
-					$itemlist = array_map( function ($r) { return array_map('htmlspecialchars', $r->to_array()); }, $d);
+					$itemlist = array_map( function ($r) { return $r->to_array(); }, $d);
 				}
 				else {
 					$itemlist[] = array('result' => 'empty set');
@@ -106,7 +106,7 @@ class HConsole extends Plugin
 			}
 			$renderer = new ArrayToTextTable($itemlist);
 			$renderer->showHeaders(true);
-			$renderer->render();
+			echo htmlspecialchars($renderer->render(true));
 		}
 	}
 
@@ -127,7 +127,7 @@ class HConsole extends Plugin
 			<a href="#" style="width:80px; padding:2px; background:#c00; text-align:center; position:fixed; bottom:0; right:0; font-size:11px; z-index:999; color:white; display:block;" onclick="jQuery('#hconsole').toggle('slow'); return false;">^ HConsole</a>
 			</div>
 			<div  id="hconsole" style='$display position:fixed; width:100%; bottom:0; left:0; padding:0; margin:0; background:#222; z-index:998;'>
-			<pre class="resizable" style="font-family:monospace; font-size:11px; padding:1em 2em; margin:1em; background:#eee; color:#222; border:1px solid #000; overflow:auto; max-height:400px;">
+			<pre class="resizable" style="font-family:monospace; font-size:11px; padding:1em 2em; margin:1em; background:#333; color:#93C763; border:1px solid #000; overflow:auto; max-height:400px;">
 GOO;
 			try {
 				Plugins::act('hconsole_debug');
