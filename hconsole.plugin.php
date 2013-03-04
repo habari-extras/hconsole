@@ -6,6 +6,7 @@ class HConsole extends Plugin
 {
 	private $code = array();
 	private $sql = false;
+	private $htmlspecial = false;
 
 	public function alias()
 	{
@@ -30,14 +31,19 @@ class HConsole extends Plugin
 
 	public function action_init()
 	{
-		Stack::add( 'template_header_javascript', Site::get_url('scripts') . '/jquery.js', 'jquery' );
-		if ( User::identify()->loggedin && $_POST->raw('hconsole_code') ) {
+		if ( User::identify()->loggedin ) {
+			Stack::add( 'template_header_javascript', Site::get_url('scripts') . '/jquery.js', 'jquery' );
+		}
+		if ( $_POST->raw('hconsole_code') ) {
 			$wsse = Utils::WSSE( $_POST['nonce'], $_POST['timestamp'] );
 			if ( $_POST['PasswordDigest'] == $wsse['digest'] ) {
-				if ( isset($_POST['sql']) && $_POST['sql'] == 'true' ) {
+				if ( isset($_POST['sql']) && $_POST['sql'] == 'RUN SQL' ) {
 					require "texttable.php";
 					$this->sql = rawurldecode($_POST->raw('hconsole_code'));
 					return;
+				}
+				if ( isset($_POST['htmlspecial']) && $_POST['htmlspecial'] == 'true' ) {
+					$this->htmlspecial = true;
 				}
 				$this->code = $this->parse_code(rawurldecode($_POST->raw('hconsole_code')));
 				foreach( $this->code['hooks'] as $i => $hook ) {
@@ -72,14 +78,31 @@ class HConsole extends Plugin
 				throw Error::raise($dat, E_COMPILE_ERROR);
 			}
 			else {
-				echo htmlspecialchars($dat);
+				if ( $this->htmlspecial ) {
+					echo htmlspecialchars($dat);
+				}
+				else {
+					echo $dat;
+				}
 			}
 		}
 		if ( $this->sql ) {
-			$d = DB::get_results($this->sql);
 			$itemlist = array();
-			foreach( $d as $r) {
-				$itemlist[] = $r->to_array();
+			if (preg_match('#^\s*select.*#i', $this->sql)) {
+				$d = DB::get_results($this->sql);
+				if (is_array($d) && count($d)) {
+					$itemlist = array_map( function ($r) { return $r->to_array(); }, $d);
+				}
+				else {
+					$itemlist[] = array('result' => 'empty set');
+				}
+			}
+			else {
+				$d = DB::query($this->sql);
+				$itemlist[] = array('result' => (string) $d);
+			}
+			if (DB::has_errors()) {
+				$itemlist = array(DB::get_last_error());
 			}
 			$renderer = new ArrayToTextTable($itemlist);
 			$renderer->showHeaders(true);
@@ -93,22 +116,23 @@ class HConsole extends Plugin
 			$wsse = Utils::wsse();
 			$code = $_POST->raw('hconsole_code');
 			$display = empty($_POST['hconsole_code']) ? 'display:none;' : '';
-			$sql = isset($_POST['sql']) ? 'checked="true"' : '';
+			$htmlspecial = isset($_POST['htmlspecial']) ? 'checked="true"' : '';
 			echo <<<GOO
 
 			<div >
 			<a href="#" style="width:80px; padding:2px; background:#c00; text-align:center; position:fixed; bottom:0; right:0; font-size:11px; z-index:999; color:white; display:block;" onclick="jQuery('#hconsole').toggle('slow'); return false;">^ HConsole</a>
 			</div>
-			<div  id="hconsole" style='$display position:fixed; width:100%; bottom:0; left:0; padding:0; margin:0; background:#ccc; z-index:998;'>
-			<form method='post' action='' style="padding:1em 2em; margin:0">
-				<textarea cols='100' rows='7' name='hconsole_code'>{$code}</textarea>
-				<input type='submit' value='run' />
-				<input type='checkbox' name='sql' value="true" $sql />SQL
+			<div  id="hconsole" style='$display position:fixed; width:100%; bottom:0; left:0; padding:0; margin:0; background:#333; z-index:998;'>
+			<form method='post' action='' style="padding:1em 2em; margin:0; text-align:left; color:#eee;">
+				<textarea cols='100' rows='7' name='hconsole_code'>{$code}</textarea><br>
+				<input type='submit' value='RUN CODE' />
+				<input type='checkbox' name='htmlspecial' value='true' $htmlspecial />htmlspecialchars<br>
+				<input type='submit' name='sql' value="RUN SQL" />
 				<input type="hidden" id="nonce" name="nonce" value="{$wsse['nonce']}">
 				<input type="hidden" id="timestamp" name="timestamp" value="{$wsse['timestamp']}">
 				<input type="hidden" id="PasswordDigest" name="PasswordDigest" value="{$wsse['digest']}">
 			</form>
-			<pre style="font-family:monospace; border:none; padding:1em 2em; margin:0; background:none; overflow:auto; max-height:150px;">
+			<pre style="font-family:monospace; font-size:11px; padding:1em 2em; margin:1em; background:#eee; color:#222; border:1px solid #000; overflow:auto; max-height:350px;">
 GOO;
 			try {
 				Plugins::act('hconsole_debug');
