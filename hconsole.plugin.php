@@ -33,6 +33,7 @@ class HConsole extends Plugin
 	{
 		if ( User::identify()->loggedin ) {
 			Stack::add( 'template_header_javascript', Site::get_url('scripts') . '/jquery.js', 'jquery' );
+			Stack::add('template_stylesheet', array($this->get_url(true) . 'hconsole.css', 'screen'));
 			if ( $_POST->raw('hconsole_code') ) {
 				$wsse = Utils::WSSE( $_POST['nonce'], $_POST['timestamp'] );
 				if ( $_POST['PasswordDigest'] == $wsse['digest'] ) {
@@ -77,123 +78,42 @@ class HConsole extends Plugin
 				throw Error::raise($dat, E_COMPILE_ERROR);
 			}
 			else {
-				if ( $this->htmlspecial ) {
-					echo htmlspecialchars($dat);
-				}
-				else {
-					echo $dat;
-				}
+				echo $this->htmlspecial ? htmlspecialchars($dat) : $dat;
 			}
 		}
 		if ( $this->sql ) {
 			$itemlist = array();
-			if (preg_match('#^\s*select.*#i', $this->sql)) {
-				$d = DB::get_results($this->sql);
-				if (is_array($d) && count($d)) {
-					$itemlist = array_map( function ($r) { return $r->to_array(); }, $d);
+			if ( preg_match('#^\s*select.*#i', $this->sql) ) {
+				$data = DB::get_results($this->sql);
+				if ( DB::has_errors() ) throw Error::raise(DB::get_last_error());
+				if ( is_array($data) && count($data) ) {
+					self::sql_dump($data);
 				}
 				else {
-					$itemlist[] = array('result' => 'empty set');
+					echo 'empty set, nothing returned.';
 				}
 			}
 			else {
-				$d = DB::query($this->sql);
-				$itemlist[] = array('result' => (string) $d);
+				$data = DB::query($this->sql);
+				if ( DB::has_errors() ) throw Error::raise(DB::get_last_error());
+				echo 'Result: ' . (string) $data;
 			}
-			if (DB::has_errors()) {
-				$itemlist = array(DB::get_last_error());
-			}
-			self::array_dump($itemlist);
+
 		}
 	}
 
-	/**
-	 * @TODO clean up this html and code here.
-	 */
-	public function template_footer()
-	{
-		if ( User::identify()->loggedin ) {
-			$wsse = Utils::wsse();
-			$code = $_POST->raw('hconsole_code');
-			$display = empty($_POST['hconsole_code']) ? 'display:none;' : '';
-			$htmlspecial = isset($_POST['htmlspecial']) ? 'checked="true"' : '';
-			$sql = isset($_POST['sql']) ? 'checked="true"' : '';
-
-			echo <<<GOO
-			<div id="hconsole_button">
-				<a href="#" onclick="jQuery('#hconsole').toggle('slow'); return false;">^ HConsole</a>
-			</div>
-			<div  id="hconsole" style="$display">
-GOO;
-			if ($this->code || $this->sql) {
-				echo '<pre class="resizable" id="hconsole_debug">';
-			
-				try {
-					Plugins::act('hconsole_debug');
-				}
-				catch ( \Exception $e ) {
-					Error::exception_handler($e);
-				}
-				echo '</pre>';
-			}
-			echo <<<MOO
-			<form method="post" action="" id="hconsole_form">
-				<textarea cols="100" rows="7" name="hconsole_code">{$code}</textarea><br>
-				<div id="hconsole_edit_filler">
-					<div id="hconsole_edit"></div>
-				</div>
-				<input type='submit' value='RUN' style="clear:both" />
-				<input type='checkbox' name='htmlspecial' value='true' $htmlspecial />htmlspecialchars
-				<input type='checkbox' name='sql' value="RUN SQL" $sql />SQL
-				<input type="hidden" id="nonce" name="nonce" value="{$wsse['nonce']}">
-				<input type="hidden" id="timestamp" name="timestamp" value="{$wsse['timestamp']}">
-				<input type="hidden" id="PasswordDigest" name="PasswordDigest" value="{$wsse['digest']}">
-			</form>
-			<script src="http://d1n0x3qji82z53.cloudfront.net/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
-			<script>
-			var editor = ace.edit("hconsole_edit");
-			var textarea = $('textarea[name="hconsole_code"]').hide();
-			$('input[name="sql"]').on('click', sqlCheck);
-			function sqlCheck (){
-			  if ($('input[name="sql"]').attr('checked')) {
-				editor.getSession().setMode('ace/mode/sql');
-			  }
-			  else {
-				editor.getSession().setMode('ace/mode/php');
-			  }
-			}
-			$(document).ready(function(){sqlCheck();});
-			editor.getSession().setValue(textarea.val());
-			editor.getSession().on('change', function(){
-			  textarea.val(editor.getSession().getValue());
-			});
-			editor.setTheme("ace/theme/twilight");
-			editor.getSession().setMode("ace/mode/php");
-			editor.commands.addCommand({
-				name: 'Run Code',
-				bindKey: {win: 'Ctrl-Q',  mac: 'Command-Q'},
-				exec: function(editor) {
-					$('#hconsole_form').submit();
-				},
-				readOnly: true // false if this command should not apply in readOnly mode
-			});
-			</script></div>
-MOO;
-		}
-	}
-
-	public static function array_dump($array) {
-		$keys = array_keys($array[0]);
+	public static function sql_dump($array) {
+		$keys = array_keys($array[0]->to_array());
 
 		echo "<table><tr>";
-		foreach ($keys as $key) {
+		foreach ( $keys as $key ) {
 			echo "<th><b>$key</b></th>";
 		}
 		echo '</tr>';
-		foreach ($array as $i => $s) {
+		foreach ( $array as $i => $query_record ) {
 			$alt = $i%2 ? "class='alt'":'';
 			echo "<tr $alt>";
-			foreach ($s as $a) {
+			foreach ( $query_record->to_array() as $a ) {
 				echo  '<td>' . htmlspecialchars(substr((string) $a, 0, 500)) . '</td>';
 			}
 			echo '</tr>';
@@ -281,6 +201,81 @@ MOO;
 			'hooks' => $hooks,
 			'debug' => implode(array_map(create_function('$a', 'return is_array($a)?$a[1] : $a;'), $debug))
 		);
+	}
+	
+	/**
+	 * @TODO clean up this html and code here.
+	 */
+	public function template_footer()
+	{
+		if ( User::identify()->loggedin ) {
+			$wsse = Utils::wsse();
+			$code = $_POST->raw('hconsole_code');
+			$display = empty($_POST['hconsole_code']) ? 'display:none;' : '';
+			$htmlspecial = isset($_POST['htmlspecial']) ? 'checked="true"' : '';
+			$sql = isset($_POST['sql']) ? 'checked="true"' : '';
+
+			echo <<<GOO
+<div id="hconsole_button">
+	<a href="#" onclick="jQuery('#hconsole').toggle('slow'); return false;">^ HConsole</a>
+</div>
+<div  id="hconsole" style="$display">
+GOO;
+			if ($this->code || $this->sql) {
+				echo '<pre class="resizable" id="hconsole_debug">';
+			
+				try {
+					Plugins::act('hconsole_debug');
+				}
+				catch ( \Exception $e ) {
+					Error::exception_handler($e);
+				}
+				echo '</pre>';
+			}
+			echo <<<MOO
+<form method="post" action="" id="hconsole_form">
+	<textarea cols="100" rows="7" name="hconsole_code">{$code}</textarea><br>
+	<div id="hconsole_edit_filler">
+		<div id="hconsole_edit"></div>
+	</div>
+	<input type='submit' value='RUN' style="clear:both" />
+	<input type='checkbox' name='htmlspecial' value='true' $htmlspecial />htmlspecialchars
+	<input type='checkbox' name='sql' value="RUN SQL" $sql />SQL
+	<input type="hidden" id="nonce" name="nonce" value="{$wsse['nonce']}">
+	<input type="hidden" id="timestamp" name="timestamp" value="{$wsse['timestamp']}">
+	<input type="hidden" id="PasswordDigest" name="PasswordDigest" value="{$wsse['digest']}">
+</form>
+<script src="http://d1n0x3qji82z53.cloudfront.net/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+<script>
+var editor = ace.edit("hconsole_edit");
+var textarea = $('textarea[name="hconsole_code"]').hide();
+$('input[name="sql"]').on('click', sqlCheck);
+function sqlCheck (){
+  if ($('input[name="sql"]').attr('checked')) {
+	editor.getSession().setMode('ace/mode/sql');
+  }
+  else {
+	editor.getSession().setMode('ace/mode/php');
+  }
+}
+$(document).ready(function(){sqlCheck();});
+editor.getSession().setValue(textarea.val());
+editor.getSession().on('change', function(){
+  textarea.val(editor.getSession().getValue());
+});
+editor.setTheme("ace/theme/twilight");
+editor.getSession().setMode("ace/mode/php");
+editor.commands.addCommand({
+	name: 'Run Code',
+	bindKey: {win: 'Ctrl-Q',  mac: 'Command-Q'},
+	exec: function(editor) {
+		$('#hconsole_form').submit();
+	},
+	readOnly: true // false if this command should not apply in readOnly mode
+});
+</script></div>
+MOO;
+		}
 	}
 }
 ?>
