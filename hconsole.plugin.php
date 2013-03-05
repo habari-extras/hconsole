@@ -33,7 +33,8 @@ class HConsole extends Plugin
 	{
 		if ( User::identify()->loggedin ) {
 			Stack::add( 'template_header_javascript', Site::get_url('scripts') . '/jquery.js', 'jquery' );
-			Stack::add('template_stylesheet', array($this->get_url(true) . 'hconsole.css', 'screen'));
+			Stack::add( 'template_stylesheet', array($this->get_url(true) . 'hconsole.css', 'screen') );
+			Stack::add( 'admin_stylesheet', array($this->get_url(true) . 'hconsole.css', 'screen') );
 			if ( $_POST->raw('hconsole_code') ) {
 				$wsse = Utils::WSSE( $_POST['nonce'], $_POST['timestamp'] );
 				if ( $_POST['PasswordDigest'] == $wsse['digest'] ) {
