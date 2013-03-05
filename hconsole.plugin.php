@@ -85,7 +85,7 @@ class HConsole extends Plugin
 		}
 		if ( $this->sql ) {
 			$itemlist = array();
-			if ( preg_match('#^\s*select.*#i', $this->sql) ) {
+			if ( preg_match('#^\s*(select|show).*#i', $this->sql) ) {
 				$data = DB::get_results($this->sql);
 				if ( DB::has_errors() ) throw Error::raise(DB::get_last_error());
 				if ( is_array($data) && count($data) ) {
@@ -205,6 +205,20 @@ class HConsole extends Plugin
 		);
 	}
 	
+	public function action_admin_theme_get_hconsole() {
+
+	}
+
+	public function filter_admin_access_tokens( array $require_any, $page )
+	{
+		switch ( $page ) {
+			case 'hconsole':
+				$require_any = array( 'super_user' => true );
+				break;
+		}
+		return $require_any;
+	}
+
 	/**
 	 * @TODO clean up this html and code here.
 	 */
