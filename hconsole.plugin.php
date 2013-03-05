@@ -104,9 +104,7 @@ class HConsole extends Plugin
 			if (DB::has_errors()) {
 				$itemlist = array(DB::get_last_error());
 			}
-			$renderer = new ArrayToTextTable($itemlist);
-			$renderer->showHeaders(true);
-			echo htmlspecialchars($renderer->render(true));
+			self::array_dump($itemlist);
 		}
 	}
 
@@ -121,26 +119,29 @@ class HConsole extends Plugin
 			$display = empty($_POST['hconsole_code']) ? 'display:none;' : '';
 			$htmlspecial = isset($_POST['htmlspecial']) ? 'checked="true"' : '';
 			$sql = isset($_POST['sql']) ? 'checked="true"' : '';
-			echo <<<GOO
 
-			<div >
-			<a href="#" style="width:80px; padding:2px; background:#c00; text-align:center; position:fixed; bottom:0; right:0; font-size:11px; z-index:999; color:white; display:block;" onclick="jQuery('#hconsole').toggle('slow'); return false;">^ HConsole</a>
+			echo <<<GOO
+			<div>
+			<a href="#" style="width:80px; padding:5px; background:#c60; text-align:center; position:fixed; bottom:0; right:0; font-size:11px; z-index:999; color:white; display:block;" onclick="jQuery('#hconsole').toggle('slow'); return false;">^ HConsole</a>
 			</div>
-			<div  id="hconsole" style='$display position:fixed; width:100%; bottom:0; left:0; padding:0; margin:0; background:#222; z-index:998;'>
-			<pre class="resizable" style="font-family:monospace; font-size:11px; padding:1em 2em; margin:1em; background:#333; color:#93C763; border:1px solid #000; overflow:auto; max-height:400px;">
+			<div  id="hconsole" style='$display line-height:11px; font-size:11px; position:fixed; width:100%; bottom:0; left:0; padding:0; margin:0; background:#222; z-index:998;'>
 GOO;
-			try {
-				Plugins::act('hconsole_debug');
-			}
-			catch ( \Exception $e ) {
-				Error::exception_handler($e);
+			if ($this->code || $this->sql) {
+				echo '<pre class="resizable" style="font-family:monospace; font-size:11px; padding:1em 2em; margin:1em; background:#333; color:#93C763; border:1px solid #000; overflow:auto; max-height:400px;">';
+			
+				try {
+					Plugins::act('hconsole_debug');
+				}
+				catch ( \Exception $e ) {
+					Error::exception_handler($e);
+				}
+				echo '</pre>';
 			}
 			echo <<<MOO
-			</pre>
-			<form method='post' action='' style="padding:1em 2em; margin:0; text-align:left; color:#eee; position:relative">
+			<form method='post' action='' id="hconsole_form" style="padding:1em 2em; margin:0; text-align:left; color:#eee; position:relative">
 				<textarea cols='100' rows='7' name='hconsole_code'>{$code}</textarea><br>
 				<div id="editor-filler" style="width:100%; position:realtive; height:180px; margin:0; padding:0;">
-				<div id="hconsole_edit" style="position:absolute; left:0; top:0; height:180px; width:100%;"></div>
+					<div id="hconsole_edit" style="position:absolute; left:0; top:0; height:180px; padding-top:10px; width:100%;"></div>
 				</div>
 				<input type='submit' value='RUN' style="clear:both" />
 				<input type='checkbox' name='htmlspecial' value='true' $htmlspecial />htmlspecialchars
@@ -169,12 +170,49 @@ GOO;
 			});
 			editor.setTheme("ace/theme/twilight");
 			editor.getSession().setMode("ace/mode/php");
+			editor.commands.addCommand({
+				name: 'Run Code',
+				bindKey: {win: 'Ctrl-Q',  mac: 'Command-Q'},
+				exec: function(editor) {
+					$('#hconsole_form').submit();
+				},
+				readOnly: true // false if this command should not apply in readOnly mode
+			});
 			</script></div>
 MOO;
-
-
 		}
 	}
+
+    public static function array_dump($sql) {
+        $keys = array_keys($sql[0]);
+        echo <<<TOO
+<style>
+.alt { background:#222; }
+table { overflow:auto; empty-cells:show; border-collapse:collapse; margin:0 0 2em; width:100%; font-size:1em; }
+tr { margin:0; padding:0; }
+caption { caption-side:top; margin:0; padding:0.75em; font:1.2em serif; border:1px solid #444; border-width:0 0 2px; background:#f3f3f3; color:#999; }
+th, td { vertical-align:top; padding:0.65em 1em; border:1px dotted #000; border-width:0 0 1px 1px; white-space:normal; }
+tr td:first-child, tr th:first-child, th.first, td.first { border-left:none; background-image:none; }
+th { text-transform:uppercase; text-align:left; font-weight:normal; font-family:serif; background:#222; }
+th.first, td.first, tbody th { border-left:none; }
+table { border-bottom:3px solid #444; }
+</style>
+TOO;
+		echo "<table><tr>";
+        foreach ($keys as $key) {
+            echo "<th><b>$key</b></th>";
+        }
+        echo '</tr>';
+        foreach ($sql as $i => $s) {
+            $alt = $i%2 ? "class='alt'":'';
+            echo "<tr $alt>";
+            foreach ($s as $a) {
+				echo  '<td>' . htmlspecialchars(substr((string) $a, 0, 500)) . '</td>';
+			}
+            echo '</tr>';
+        }
+        echo '</table>';
+    }
 
 	private function get_functions ( $code ) {
 		$tokens = token_get_all( "<?php $code ?>");
