@@ -33,31 +33,31 @@ class HConsole extends Plugin
 	{
 		if ( User::identify()->loggedin ) {
 			Stack::add( 'template_header_javascript', Site::get_url('scripts') . '/jquery.js', 'jquery' );
-		}
-		if ( $_POST->raw('hconsole_code') ) {
-			$wsse = Utils::WSSE( $_POST['nonce'], $_POST['timestamp'] );
-			if ( $_POST['PasswordDigest'] == $wsse['digest'] ) {
-				if ( isset($_POST['sql']) && $_POST['sql'] == 'RUN SQL' ) {
-					$this->sql = rawurldecode($_POST->raw('hconsole_code'));
-					return;
-				}
-				if ( isset($_POST['htmlspecial']) && $_POST['htmlspecial'] == 'true' ) {
-					$this->htmlspecial = true;
-				}
-				$this->code = $this->parse_code(rawurldecode($_POST->raw('hconsole_code')));
-				foreach( $this->code['hooks'] as $i => $hook ) {
-					$functions = $this->get_functions($hook['code']);
-					if ( empty($functions) ) {
-						trigger_error( "Parse Error in $i. No function to register.", E_USER_WARNING );
+			if ( $_POST->raw('hconsole_code') ) {
+				$wsse = Utils::WSSE( $_POST['nonce'], $_POST['timestamp'] );
+				if ( $_POST['PasswordDigest'] == $wsse['digest'] ) {
+					if ( isset($_POST['sql']) && $_POST['sql'] == 'RUN SQL' ) {
+						$this->sql = rawurldecode($_POST->raw('hconsole_code'));
+						return;
 					}
-					else {
-						eval($hook['code']);
-						foreach ( $functions as $function ) {
-							if ( $i == 'action_init' ) {
-								call_user_func($function);
-							}
-							else {
-								Plugins::register($function, $hook['type'], $hook['hook']);
+					if ( isset($_POST['htmlspecial']) && $_POST['htmlspecial'] == 'true' ) {
+						$this->htmlspecial = true;
+					}
+					$this->code = $this->parse_code(rawurldecode($_POST->raw('hconsole_code')));
+					foreach( $this->code['hooks'] as $i => $hook ) {
+						$functions = $this->get_functions($hook['code']);
+						if ( empty($functions) ) {
+							trigger_error( "Parse Error in $i. No function to register.", E_USER_WARNING );
+						}
+						else {
+							eval($hook['code']);
+							foreach ( $functions as $function ) {
+								if ( $i == 'action_init' ) {
+									call_user_func($function);
+								}
+								else {
+									Plugins::register($function, $hook['type'], $hook['hook']);
+								}
 							}
 						}
 					}
@@ -120,13 +120,13 @@ class HConsole extends Plugin
 			$sql = isset($_POST['sql']) ? 'checked="true"' : '';
 
 			echo <<<GOO
-			<div>
-			<a href="#" style="width:80px; padding:5px; background:#c60; text-align:center; position:fixed; bottom:0; right:0; font-size:11px; z-index:999; color:white; display:block;" onclick="jQuery('#hconsole').toggle('slow'); return false;">^ HConsole</a>
+			<div id="hconsole_button">
+				<a href="#" onclick="jQuery('#hconsole').toggle('slow'); return false;">^ HConsole</a>
 			</div>
-			<div  id="hconsole" style='$display line-height:11px; font-size:11px; position:fixed; width:100%; bottom:0; left:0; padding:0; margin:0; background:#222; z-index:998;'>
+			<div  id="hconsole" style="$display">
 GOO;
 			if ($this->code || $this->sql) {
-				echo '<pre class="resizable" style="font-family:monospace; font-size:11px; padding:1em 2em; margin:1em; background:#333; color:#93C763; border:1px solid #000; overflow:auto; max-height:400px;">';
+				echo '<pre class="resizable" id="hconsole_debug">';
 			
 				try {
 					Plugins::act('hconsole_debug');
@@ -137,10 +137,10 @@ GOO;
 				echo '</pre>';
 			}
 			echo <<<MOO
-			<form method='post' action='' id="hconsole_form" style="padding:1em 2em; margin:0; text-align:left; color:#eee; position:relative">
-				<textarea cols='100' rows='7' name='hconsole_code'>{$code}</textarea><br>
-				<div id="editor-filler" style="width:100%; position:realtive; height:180px; margin:0; padding:0;">
-					<div id="hconsole_edit" style="position:absolute; left:0; top:0; height:180px; padding-top:10px; width:100%;"></div>
+			<form method="post" action="" id="hconsole_form">
+				<textarea cols="100" rows="7" name="hconsole_code">{$code}</textarea><br>
+				<div id="hconsole_edit_filler">
+					<div id="hconsole_edit"></div>
 				</div>
 				<input type='submit' value='RUN' style="clear:both" />
 				<input type='checkbox' name='htmlspecial' value='true' $htmlspecial />htmlspecialchars
@@ -156,10 +156,10 @@ GOO;
 			$('input[name="sql"]').on('click', sqlCheck);
 			function sqlCheck (){
 			  if ($('input[name="sql"]').attr('checked')) {
-			    editor.getSession().setMode('ace/mode/sql');
+				editor.getSession().setMode('ace/mode/sql');
 			  }
 			  else {
-			    editor.getSession().setMode('ace/mode/php');
+				editor.getSession().setMode('ace/mode/php');
 			  }
 			}
 			$(document).ready(function(){sqlCheck();});
@@ -182,36 +182,24 @@ MOO;
 		}
 	}
 
-    public static function array_dump($sql) {
-        $keys = array_keys($sql[0]);
-        echo <<<TOO
-<style>
-.alt { background:#222; }
-table { overflow:auto; empty-cells:show; border-collapse:collapse; margin:0 0 2em; width:100%; font-size:1em; }
-tr { margin:0; padding:0; }
-caption { caption-side:top; margin:0; padding:0.75em; font:1.2em serif; border:1px solid #444; border-width:0 0 2px; background:#f3f3f3; color:#999; }
-th, td { vertical-align:top; padding:0.65em 1em; border:1px dotted #000; border-width:0 0 1px 1px; white-space:normal; }
-tr td:first-child, tr th:first-child, th.first, td.first { border-left:none; background-image:none; }
-th { text-transform:uppercase; text-align:left; font-weight:normal; font-family:serif; background:#222; }
-th.first, td.first, tbody th { border-left:none; }
-table { border-bottom:3px solid #444; }
-</style>
-TOO;
+	public static function array_dump($array) {
+		$keys = array_keys($array[0]);
+
 		echo "<table><tr>";
-        foreach ($keys as $key) {
-            echo "<th><b>$key</b></th>";
-        }
-        echo '</tr>';
-        foreach ($sql as $i => $s) {
-            $alt = $i%2 ? "class='alt'":'';
-            echo "<tr $alt>";
-            foreach ($s as $a) {
+		foreach ($keys as $key) {
+			echo "<th><b>$key</b></th>";
+		}
+		echo '</tr>';
+		foreach ($array as $i => $s) {
+			$alt = $i%2 ? "class='alt'":'';
+			echo "<tr $alt>";
+			foreach ($s as $a) {
 				echo  '<td>' . htmlspecialchars(substr((string) $a, 0, 500)) . '</td>';
 			}
-            echo '</tr>';
-        }
-        echo '</table>';
-    }
+			echo '</tr>';
+		}
+		echo '</table>';
+	}
 
 	private function get_functions ( $code ) {
 		$tokens = token_get_all( "<?php $code ?>");
