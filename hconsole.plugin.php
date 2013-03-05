@@ -31,7 +31,8 @@ class HConsole extends Plugin
 
 	public function action_init()
 	{
-		if ( User::identify()->loggedin ) {
+		$user = User::identify();
+		if ( $user->loggedin && $user->can('super_user') ) {
 			Stack::add( 'template_header_javascript', Site::get_url('scripts') . '/jquery.js', 'jquery' );
 			Stack::add( 'template_stylesheet', array($this->get_url(true) . 'hconsole.css', 'screen') );
 			Stack::add( 'admin_stylesheet', array($this->get_url(true) . 'hconsole.css', 'screen') );
@@ -209,7 +210,8 @@ class HConsole extends Plugin
 	 */
 	public function template_footer()
 	{
-		if ( User::identify()->loggedin ) {
+		$user = User::identify();
+		if ( $user->loggedin && $user->can('super_user') ) {
 			$wsse = Utils::wsse();
 			$code = $_POST->raw('hconsole_code');
 			$display = empty($_POST['hconsole_code']) ? 'display:none;' : '';
