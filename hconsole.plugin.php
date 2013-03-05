@@ -38,7 +38,6 @@ class HConsole extends Plugin
 			$wsse = Utils::WSSE( $_POST['nonce'], $_POST['timestamp'] );
 			if ( $_POST['PasswordDigest'] == $wsse['digest'] ) {
 				if ( isset($_POST['sql']) && $_POST['sql'] == 'RUN SQL' ) {
-					require "texttable.php";
 					$this->sql = rawurldecode($_POST->raw('hconsole_code'));
 					return;
 				}
